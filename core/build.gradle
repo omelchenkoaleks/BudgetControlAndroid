@@ -1,0 +1,9 @@
+apply plugin: 'java-library'
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'org.xerial:sqlite-jdbc:3.25.2'
+}
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
