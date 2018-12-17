@@ -1,6 +1,5 @@
 package com.omelchenkoaleks.core.database;
 
-import org.sqlite.SQLiteException;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,32 +9,43 @@ import java.util.logging.Logger;
 
 public class SQLiteConnection {
 
-    private static Connection connection;
+    private static Connection con;
+    private static String urlConnection;
+    private static String driverClassName;
 
-    public static Connection getConnection() {
+    //TODO реализовать передачу датасорса, если ядро например будет использоваться для веб приложения
 
+    public static void init(String driverName, String url) {
+        urlConnection = url;
+        driverClassName = driverName;
+        createConnection();
+    }
+
+    private static void createConnection(){
         try {
 
-            Class.forName("org.sqlite.JDBC").newInstance();
+            Class.forName(driverClassName).newInstance();
 
-            String url = "jdbc:sqlite:D:\\DBsqlite_arhiv\\money.db";
+            if (con == null) {
 
-            if (connection == null) {
-                connection = DriverManager.getConnection(url);
+                con = DriverManager.getConnection(urlConnection);
+                con.createStatement().execute("PRAGMA foreign_keys = ON");
+                con.createStatement().execute("PRAGMA encoding = \"UTF-8\"");
             }
-            connection.createStatement().execute("PRAGMA foreign_keys = ON");
-            return connection;
 
+        } catch (SQLException | ClassNotFoundException | InstantiationException | IllegalAccessException ex) {
+            Logger.getLogger(SQLiteConnection.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
-        } catch (SQLiteException | ClassNotFoundException | InstantiationException | IllegalAccessException ex) {
-
-            Logger.getLogger(org.sqlite.SQLiteConnection.class.getName()).log(Level.SEVERE, null, ex);
-
+    public static Connection getConnection() {
+        try {
+            if (con == null || con.isClosed()){
+                createConnection();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        return null;
-
+        return con;
     }
 }

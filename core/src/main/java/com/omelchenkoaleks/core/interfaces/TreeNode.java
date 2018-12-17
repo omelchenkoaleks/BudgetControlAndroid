@@ -10,11 +10,11 @@ public interface TreeNode {
 
     String getName();
 
-    long getParentId();
+    long getId(); // каждый элемент дерева должен иметь свой уникальный идентификатор
 
     void setId(long id); // установить id
 
-    long getId(); // каждый элемент дерева должен иметь свой уникальный идентификатор
+    long getParentId();
 
     void add(TreeNode child); // добавить один дочерний элемент
 
@@ -24,12 +24,11 @@ public interface TreeNode {
 
     TreeNode getChild(long id); // получение дочернего элемента по id
 
-    TreeNode getParent(); // получение родительского элемента - пригодится в разных ситуациях,
-    // например  для отчетности по всем узлам деревьев
+    TreeNode getParent(); // получение родительского элемента - пригодится в разных ситуациях, например для отчетности по всем узлам дерева
 
-    void setParent(TreeNode parent); // установка родительского элемента
+    void setParent(TreeNode parent);	// установка родительского элемента
 
-    boolean hasChilds(); // проверяет, если дочерние элементы
+    boolean hasChilds(); // проверяет, есть ли дочерние элементы
 
     boolean hasParent(); // проверяет, есть ли родитель
 }

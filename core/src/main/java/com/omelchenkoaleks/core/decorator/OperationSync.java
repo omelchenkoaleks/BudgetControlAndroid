@@ -1,6 +1,7 @@
 package com.omelchenkoaleks.core.decorator;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -57,9 +58,49 @@ public class OperationSync implements OperationDAO {
     private void fillOperationMap() {
         // в operationMap и operationList находятся одни и те же объекты!!
 
+        // TODO когда начнется поддержка Java 8 для Android - использовать этот код
+//        for (OperationType type : OperationType.values()) {
+//            // используем lambda выражение для фильтрации
+//            operationMap.put(type, operationList.stream().filter(o -> o.getOperationType() == type).collect(Collectors.toList()));
+//        }
+
+
         for (OperationType type : OperationType.values()) {
-            // используем lambda выражение для фильтрации
-            operationMap.put(type, operationList.stream().filter(o -> o.getOperationType() == type).collect(Collectors.toList()));
+            ArrayList<Operation> incomeOperations = new ArrayList<>();
+            ArrayList<Operation> outcomeOperations = new ArrayList<>();
+            ArrayList<Operation> transferOperations = new ArrayList<>();
+            ArrayList<Operation> convertOperations = new ArrayList<>();
+
+            // проход по коллекции только один раз
+            for (Operation o : operationList) {
+                switch (o.getOperationType()){
+                    case INCOME:{
+                        incomeOperations.add(o);
+                        break;
+                    }
+
+                    case OUTCOME:{
+                        outcomeOperations.add(o);
+                        break;
+                    }
+
+                    case TRANSFER:{
+                        transferOperations.add(o);
+                        break;
+                    }
+
+                    case CONVERT:{
+                        convertOperations.add(o);
+                        break;
+                    }
+                }
+            }
+
+            operationMap.put(OperationType.INCOME, incomeOperations);
+            operationMap.put(OperationType.OUTCOME, outcomeOperations);
+            operationMap.put(OperationType.CONVERT, convertOperations);
+            operationMap.put(OperationType.TRANSFER, transferOperations);
+
         }
 
     }
