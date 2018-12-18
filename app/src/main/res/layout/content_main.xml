@@ -8,4 +8,10 @@
     tools:context=".activities.MainActivity"
     tools:showIn="@layout/app_bar_main">
 
+    <fragment
+        android:name="com.omelchenkoaleks.budgetcontrol.fragments.SprListFragment"
+        android:id="@+id/spr_list_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
 </android.support.constraint.ConstraintLayout>
