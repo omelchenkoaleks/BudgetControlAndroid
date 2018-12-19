@@ -3,11 +3,9 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Android Studio</string>
-    <string name="nav_header_subtitle">android.studio@android.com</string>
-    <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
     <string name="loading">Loading...</string>
+
 
     <!-- боковое меню-->
     <string name="operations">Operations</string>
@@ -16,5 +14,133 @@
     <string name="reports">Reports</string>
     <string name="settings">Settings</string>
     <string name="help">About</string>
+
+    <!--popup меню для справочников-->
+    <string name="add_sub">Sub category</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+
+
+    <string name="confirm">Confirm</string>
+    <string name="confirm_delete">Delete record?</string>
+    <string name="confirm_delete_amount">Delete amount?</string>
+    <string name="has_operations">Can\'t delete record with operations</string>
+    <string name="deleted">Cancel delete?</string>
+    <string name="undo">UNDO</string>
+
+
+    <string name="tab_all">All</string>
+    <string name="tab_income">Income</string>
+    <string name="tab_outcome">Outcome</string>
+    <string name="name">Name</string>
+
+    <string name="enter_name">Enter name</string>
+    <string name="cant_delete_default_currency">Cant delete default currency</string>
+
+    <string name="select_source_from">Select source FROM</string>
+    <string name="select_source_to">Select source TO</string>
+    <string name="select_storage_from">Select storage FROM</string>
+    <string name="select_storage_to">Select storage TO</string>
+
+
+    <string name="enter_amount_from">Enter amount FROM</string>
+    <string name="enter_amount_to">Enter amount TO</string>
+    <string name="type">Type</string>
+
+    <string name="income">Income</string>
+    <string name="outcome">Outcome</string>
+    <string name="transfer">Transfer</string>
+    <string name="convert">Convert</string>
+
+    <string name="add_income">+ Income</string>
+    <string name="add_outcome">+ Outcome</string>
+    <string name="add_transfer">+ Transfer</string>
+    <string name="add_convert">+ Convert</string>
+
+    <string name="editing">Edit</string>
+    <string name="adding">Add</string>
+
+    <string name="icon">Icon</string>
+    <string name="no_data">No data</string>
+    <string name="title_activity_select_icon">SelectIconActivity</string>
+
+    <string name="select_icon">Select icon</string>
+    <string name="title_activity_operation_list">OperationListActivity</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- Example General settings -->
+    <string name="pref_header_general">General</string>
+
+    <string name="pref_title_social_recommendations">Enable social recommendations</string>
+    <string name="pref_description_social_recommendations">Recommendations for people to contact
+        based on your message history
+    </string>
+
+    <string name="pref_title_display_name">Display name</string>
+    <string name="pref_default_display_name">John Smith</string>
+
+    <string name="pref_title_add_friends_to_messages">Add friends to messages</string>
+    <string-array name="pref_example_list_titles">
+        <item>Always</item>
+        <item>When possible</item>
+        <item>Never</item>
+    </string-array>
+    <string-array name="pref_example_list_values">
+        <item>1</item>
+        <item>0</item>
+        <item>-1</item>
+    </string-array>
+
+    <!-- Example settings for Data & Sync -->
+    <string name="pref_header_data_sync">Data &amp; sync</string>
+
+    <string name="pref_title_sync_frequency">Sync frequency</string>
+
+    <string-array name="pref_sync_frequency_titles">
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 hour</item>
+        <item>3 hours</item>
+        <item>6 hours</item>
+        <item>Never</item>
+    </string-array>
+    <string-array name="pref_sync_frequency_values">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+        <item>180</item>
+        <item>360</item>
+        <item>-1</item>
+    </string-array>
+
+
+    <string name="convert_from_title">From</string>
+    <string name="convert_to_title">To</string>
+
+    <string name="source">Source</string>
+    <string name="source_from">Source (from)</string>
+    <string name="source_to">Source (to)</string>
+    <string name="storage">Storage</string>
+    <string name="storage_from">Storage (from)</string>
+    <string name="storage_to">Счет (куда)</string>
+    <string name="amount">Amount</string>
+    <string name="currency">Currency</string>
+    <string name="operation_type">Operation type</string>
+
+    <string name="no_available_currency">No available currency</string>
+    <string name="currency_not_exist">currency not exist for strage</string>
+
+
+    <string name="select_value">Select value</string>
+    <string name="balance">Balance</string>
+
+    <string name="currency_list">Available currencies</string>
+
+    <string name="cant_delete_currency_amount">Cant delete</string>
+
+    <string name="total_balance">Total amount:</string>
+    <string name="enter_amount">enter amount</string>
 
 </resources>

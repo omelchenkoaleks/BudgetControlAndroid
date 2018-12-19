@@ -3,11 +3,9 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Android Studio</string>
-    <string name="nav_header_subtitle">android.studio@android.com</string>
-    <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
     <string name="loading">Загрузка...</string>
+
 
     <!-- боковое меню-->
     <string name="operations">Операции</string>
@@ -16,5 +14,113 @@
     <string name="reports">Отчеты</string>
     <string name="settings">Настройки</string>
     <string name="help">Справка</string>
+
+    <!--popup меню для справочников-->
+    <string name="add_sub">Подкатегория</string>
+    <string name="edit">Изменить</string>
+    <string name="delete">Удалить</string>
+
+    <string name="confirm">Подтверждение</string>
+    <string name="confirm_delete">Действительно хотите удалить?</string>
+    <string name="has_operations">Нельзя удалить запись, которая используется в операции</string>
+    <string name="deleted">Запись удалена</string>
+    <string name="undo">ОТМЕНИТЬ</string>
+
+    <string name="confirm_delete_amount">Вернуть баланс по этой валюте после сохранения будет невозможно. Продолжить?</string>
+
+
+    <string name="tab_all">Все</string>
+    <string name="tab_income">Доходы</string>
+    <string name="tab_outcome">Расходы</string>
+
+    <string name="enter_amount_from">Введите сумму, откуда переводите</string>
+    <string name="enter_amount_to">Введите сумму, куда переводите</string>
+
+    <string name="cant_delete_default_currency">Нельзя отключить валюту, используемую по-умолчанию</string>
+
+
+    <string name="name">Название</string>
+
+    <string name="enter_name">Введите название</string>
+    <string name="enter_amount">Введите сумму</string>
+    <string name="type">Тип</string>
+
+
+    <string name="select_source_from">Выберите категорию, откуда получили</string>
+    <string name="select_source_to">Выберите категорию, куда потратили</string>
+    <string name="select_storage_from">Выберите счет, откуда переводите</string>
+    <string name="select_storage_to">Выберите счет, куда переводите</string>
+
+
+
+    <string name="income">Доход</string>
+    <string name="outcome">Расход</string>
+    <string name="transfer">Перевод</string>
+    <string name="convert">Обмен</string>
+
+    <string name="editing">Редактирование</string>
+    <string name="adding">Добавление</string>
+
+    <string name="icon">Иконка</string>
+    <string name="no_data">Нет данных</string>
+
+    <string name="select_icon">Выбор иконки</string>
+
+    <string name="convert_from_title">Откуда переводите</string>
+    <string name="convert_to_title">Куда переводите</string>
+
+
+    <string name="source_from">Категория (откуда)</string>
+    <string name="source_to">Категория (куда)</string>
+    <string name="storage_from">Счет (откуда)</string>
+    <string name="storage_to">Счет (куда)</string>
+
+    <string name="source">Категория</string>
+    <string name="storage">Счет</string>
+    <string name="amount">Сумма</string>
+    <string name="currency">Валюта</string>
+    <string name="operation_type">Тип операции</string>
+
+    <string name="add_income">+ Доход</string>
+    <string name="add_outcome">+ Расход</string>
+    <string name="add_transfer">+ Перевод</string>
+    <string name="add_convert">+ Обмен</string>
+
+
+    <string name="no_available_currency">Нет доступных валют для вабранного счета</string>
+
+    <string name="select_value">Выберите значение</string>
+
+    <string name="balance">Баланс</string>
+
+    <string name="currency_list">Доступные валюты</string>
+    <string name="cant_delete_currency_amount">Нельзя удалить валюту, у которой есть остаток</string>
+    <string name="total_balance">Общий остаток:</string>
+
+    <string name="currency_not_exist">валюта не существует</string>
+
+    <string name="pref_title_sync_frequency">Частота синхронизации</string>
+
+    <string name="pref_header_data_sync">Данные синхронизировать</string>
+
+    <string name="pref_title_add_friends_to_messages">Добавить друзей в сообщения</string>
+
+    <string name="pref_default_display_name">Джон</string>
+
+    <string name="pref_title_display_name">Отображаемое имя</string>
+
+    <string name="pref_description_social_recommendations">Рекомендации для людей, чтобы связаться
+        на основе вашей истории сообщений
+    </string>
+
+    <string name="pref_title_social_recommendations">Включить социальные рекомендации</string>
+
+    <string name="pref_header_general">генеральный</string>
+
+    <string name="title_activity_settings">Настройки</string>
+
+    <string name="title_activity_operation_list">ОперацияЛистАктивность</string>
+
+    <string name="title_activity_select_icon">ВыбратьИконку</string>
 
 </resources>

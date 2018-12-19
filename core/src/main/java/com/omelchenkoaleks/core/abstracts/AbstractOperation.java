@@ -5,9 +5,11 @@ import java.util.Calendar;
 import com.omelchenkoaleks.core.enums.OperationType;
 import com.omelchenkoaleks.core.interfaces.Operation;
 
-public abstract class AbstractOperation implements Operation, Comparable<Operation>{
+public abstract class AbstractOperation implements Operation{
 
     private long id;
+    private String name;
+    private String iconName;
     private Calendar dateTime; // дата и время выполнения операции (подставлять автоматически при создании, но можно будет изменять в любое время)
     private String description; // доп. информация, которую вводит пользователь
     private OperationType operationType;// тип операции (доход, расход, перевод, конвертация)
@@ -29,6 +31,25 @@ public abstract class AbstractOperation implements Operation, Comparable<Operati
     }
 
 
+    @Override
+    public String getIconName() {
+        return iconName;
+    }
+
+    @Override
+    public void setIconName(String iconName) {
+        this.iconName = iconName;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public long getId() {
         return id;
@@ -64,8 +85,22 @@ public abstract class AbstractOperation implements Operation, Comparable<Operati
         this.operationType = operationType;
     }
 
+
+
+
     @Override
-    public int compareTo(Operation o) {
-        return o.getDateTime().compareTo(dateTime);
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AbstractOperation that = (AbstractOperation) o;
+
+        return id == that.id;
+
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (id ^ (id >>> 32));
     }
 }

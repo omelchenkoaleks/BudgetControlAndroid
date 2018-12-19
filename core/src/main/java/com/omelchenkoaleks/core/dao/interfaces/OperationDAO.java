@@ -7,5 +7,8 @@ import java.util.List;
 
 public interface OperationDAO extends CommonDAO<Operation> {
 
-    List<Operation> getList(OperationType operationType);
+    String OPERATION_TABLE = "operation";
+
+    List<Operation> getList(OperationType operationType);// получить список операций определенного типа
+
 }

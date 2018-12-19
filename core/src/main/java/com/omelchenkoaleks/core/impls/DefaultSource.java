@@ -8,7 +8,7 @@ import com.omelchenkoaleks.core.interfaces.TreeNode;
 import com.omelchenkoaleks.core.enums.OperationType;
 
 
-public class DefaultSource extends AbstractTreeNode implements Source {
+public class DefaultSource extends AbstractTreeNode<DefaultSource> implements Source<DefaultSource> {
 
     private OperationType operationType;
 
@@ -19,7 +19,7 @@ public class DefaultSource extends AbstractTreeNode implements Source {
         super(name);
     }
 
-    public DefaultSource(List<TreeNode> childs) {
+    public DefaultSource(List<DefaultSource> childs) {
         super(childs);
     }
 
@@ -27,7 +27,7 @@ public class DefaultSource extends AbstractTreeNode implements Source {
         super(name, id);
     }
 
-    public DefaultSource(long id, List<TreeNode> childs, TreeNode parent, String name) {
+    public DefaultSource(long id, List<DefaultSource> childs, DefaultSource parent, String name) {
         super(id, childs, parent, name);
     }
 
@@ -49,22 +49,23 @@ public class DefaultSource extends AbstractTreeNode implements Source {
     }
 
     @Override
-    public void add(TreeNode child) {
+    public void add(DefaultSource child) {
 
         // TODO применить паттерн
         // для дочернего элемента устанавливаем тип операции родительского элемента
-        if (child instanceof DefaultSource){
-            ((DefaultSource)child).setOperationType(operationType);
-        }
+
+        child.setOperationType(operationType);
 
         super.add(child);
     }
 
     @Override
-    public void setParent(TreeNode parent) {
-        if (parent instanceof DefaultSource){
-            operationType = ((DefaultSource)parent).getOperationType();// при установке родителя - автоматически проставляем тип операции как у родителя
-        }
+    public void setParent(DefaultSource parent) {
+
+        operationType = parent.getOperationType();// при установке родителя - автоматически проставляем тип операции как у родителя
+
         super.setParent(parent);
     }
+
+
 }

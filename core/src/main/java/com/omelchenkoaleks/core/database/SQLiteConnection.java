@@ -24,6 +24,16 @@ public class SQLiteConnection {
     private static void createConnection(){
         try {
 
+//            if (urlConnection==null){
+//                urlConnection = "jdbc:sqlite:c:\\data\\money.db";
+//
+//            }
+//
+//            if (driverClassName==null){
+//                driverClassName = "org.sqlite.JDBC";
+//
+//            }
+
             Class.forName(driverClassName).newInstance();
 
             if (con == null) {
@@ -48,4 +58,7 @@ public class SQLiteConnection {
         }
         return con;
     }
+
+
+
 }

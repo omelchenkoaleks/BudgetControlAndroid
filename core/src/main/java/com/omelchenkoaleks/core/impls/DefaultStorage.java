@@ -11,13 +11,13 @@ import com.omelchenkoaleks.core.abstracts.AbstractTreeNode;
 import com.omelchenkoaleks.core.exceptions.AmountException;
 import com.omelchenkoaleks.core.exceptions.CurrencyException;
 import com.omelchenkoaleks.core.interfaces.Storage;
+import com.omelchenkoaleks.core.utils.RateUtils;
 
-public class DefaultStorage extends AbstractTreeNode implements Storage {
-
+public class DefaultStorage extends AbstractTreeNode<DefaultStorage> implements Storage<DefaultStorage> {
 
     // сразу инициализируем пустые коллекции, потому что хоть одна валюта будет
     private Map<Currency, BigDecimal> currencyAmounts = new HashMap<>();
-    private List<Currency> currencyList = new ArrayList<>();
+//    private List<Currency> currencyList = new ArrayList<>();
 
 
     public DefaultStorage() {
@@ -33,7 +33,6 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
 
     public DefaultStorage(List<Currency> currencyList, Map<Currency, BigDecimal> currencyAmounts, String name) {
         super(name);
-        this.currencyList = currencyList;
         this.currencyAmounts = currencyAmounts;
     }
 
@@ -41,20 +40,10 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
         this.currencyAmounts = currencyAmounts;
     }
 
-    public DefaultStorage(List<Currency> currencyList) {
-        this.currencyList = currencyList;
-    }
-
-
-
 
     @Override
     public Map<Currency, BigDecimal> getCurrencyAmounts() {
         return currencyAmounts;
-    }
-
-    public void setCurrencyAmounts(Map<Currency, BigDecimal> currencyAmounts) {
-        this.currencyAmounts = currencyAmounts;
     }
 
 
@@ -67,8 +56,11 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
 
     @Override
     public void updateAmount(BigDecimal amount, Currency currency) throws CurrencyException, AmountException {
-        checkCurrencyExist(currency);
-        checkAmount(amount);// не даем балансу уйти в минус
+
+
+        //checkCurrencyExist(currency);
+        //checkAmount(amount);// не даем балансу уйти в минус
+
         currencyAmounts.put(currency, amount);
     }
 
@@ -79,9 +71,6 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
             throw new CurrencyException("Currency " + currency + " not exist");
         }
     }
-
-
-
 
 
     // сумма не должна быть меньше нуля (в реальности такое невозможно, мы не можем потратить больше того, что есть)
@@ -101,8 +90,8 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
             throw new CurrencyException("Currency already exist");// пока просто сообщение на англ, без локализации
         }
 
-        currencyList.add(currency);
-        currencyAmounts.put(currency, initAmount);
+        currencyAmounts.put(currency, initAmount); // обновляем валюту и баланс по ней (если такая валюту уже была - она заменится (т.к. ключи в map должны быть уникальными)
+
 
     }
 
@@ -117,31 +106,61 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
 //        }
 
         currencyAmounts.remove(currency);
-        currencyList.remove(currency);
 
+
+    }
+
+    @Override
+    public void deleteAllCurrencies() {
+        currencyAmounts.clear();
     }
 
 
     @Override
     public List<Currency> getAvailableCurrencies() {
-        return currencyList;
+        return new ArrayList(currencyAmounts.keySet()); // список List получаем из ключей карты
     }
 
 
+    // считает средний баланс в одной валюте, включая все дочерние storage
     @Override
-    public BigDecimal getApproxAmount(Currency currency) {
-        // TODO реализовать расчет остатка с приведением в одну валюту
-        // реализуем позже
-        throw new UnsupportedOperationException("Not implemented");
+    public BigDecimal getApproxAmount(Currency targetCurrency) {// targetCurrency - валюта, в которую переводим
 
+        BigDecimal sum = BigDecimal.ZERO;
+
+        for (Currency c : getAvailableCurrencies()) {
+
+            try {
+                if (c.equals(targetCurrency)) {
+                    sum = sum.add(getAmount(c)); // если в storage есть баланс по валюте, в которую переводим - просто прибавляем (не конвертируем по курсу)
+                } else { // все остальные валюты переводим по курсу
+                    sum = sum.add(RateUtils.getRate(targetCurrency, c).multiply(getAmount(c))); // переводим в нужную валюту, согласно таблице конвертации
+                }
+            } catch (CurrencyException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        // прибавляем все балансы дочерних элементов
+        for (Storage s : getChilds()) {
+            try {
+                sum = sum.add(s.getApproxAmount(targetCurrency)); // каждый дочерний элемент содержит сумму все дочерних балансов - поэтому по цепочке получаем все балансы
+            } catch (CurrencyException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return sum;
     }
+
 
     @Override
     public Currency getCurrency(String code) throws CurrencyException {
         // количество валют для каждого хранилища будет небольшим - поэтому можно провоить поиск через цикл
         // можно использовать библиотеку Apache Commons Collections
 
-        for (Currency currency : currencyList) {
+        for (Currency currency : getAvailableCurrencies()) {
             if (currency.getCurrencyCode().equals(code)) {
                 return currency;
             }
@@ -153,3 +172,4 @@ public class DefaultStorage extends AbstractTreeNode implements Storage {
 
 
 }
+

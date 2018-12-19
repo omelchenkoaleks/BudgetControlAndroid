@@ -4,7 +4,7 @@ import com.omelchenkoaleks.core.enums.OperationType;
 
 import java.util.Calendar;
 
-public interface Operation extends Comparable<Operation> {
+public interface Operation extends IconNode {
 
     long getId();
 
@@ -15,4 +15,5 @@ public interface Operation extends Comparable<Operation> {
     Calendar getDateTime();
 
     String getDescription();
+
 }

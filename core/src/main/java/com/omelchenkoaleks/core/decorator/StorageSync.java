@@ -1,6 +1,7 @@
 package com.omelchenkoaleks.core.decorator;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Currency;
 import java.util.HashMap;
@@ -15,7 +16,7 @@ import com.omelchenkoaleks.core.utils.TreeUtils;
 
 // синхронизирует все действия между объектами коллекции и базой данных
 // паттерн Декоратор (измененный)
-public class StorageSync implements StorageDAO {
+public class StorageSync extends AbstractSync<Storage> implements StorageDAO {
 
     private TreeUtils<Storage> treeUtils = new TreeUtils();// построитель дерева
 
@@ -36,7 +37,7 @@ public class StorageSync implements StorageDAO {
 
         for (Storage s : storageList) {
             identityMap.put(s.getId(), s);
-            treeUtils.addToTree(s.getParentId(), s, treeList);
+            treeUtils.addToTree(s.getParentId(), s, treeList, storageList);
         }
 
     }
@@ -55,15 +56,27 @@ public class StorageSync implements StorageDAO {
 
     @Override
     // TODO подумать как сделать - сначала обновлять в базе, а потом уже в коллекции (либо - если в базе не обновилось - откатить изменения в объекте коллекции)
-    public boolean update(Storage storage) {
+    public boolean update(Storage storage) throws SQLException {
         if (storageDAO.update(storage)) {
+
+            Storage s = identityMap.get(storage.getId());
+
+            // данные обновлятся сразу во всех коллекциях, т.к. они ссылаются на один и тот же объект
+            // не нужно пробегать по всем коллекциям и обновлять в них
+            s.setName(storage.getName());
+            s.setIconName(storage.getIconName());
+            s.getCurrencyAmounts().clear();
+            s.getAvailableCurrencies().clear();
+            s.getCurrencyAmounts().putAll(storage.getCurrencyAmounts());
+            s.getAvailableCurrencies().addAll(storage.getAvailableCurrencies());
+
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean delete(Storage storage) {
+    public boolean delete(Storage storage) throws SQLException {
         // TODO добавить нужные Exceptions
         if (storageDAO.delete(storage)) {
             removeFromCollections(storage);
@@ -76,11 +89,13 @@ public class StorageSync implements StorageDAO {
 
     // добавляет объект во все коллекции
     private void addToCollections(Storage storage) {
+
         identityMap.put(storage.getId(), storage);
 
         if (storage.hasParent()) {
-            if (!storage.getParent().getChilds().contains(storage)) {// если ранее не был добавлен уже
-                storage.getParent().add(storage);
+            Storage parent = identityMap.get(storage.getParent().getId());
+            if (!parent.getChilds().contains(storage)) {// если ранее не был добавлен уже
+                parent.add(storage);
             }
         } else {// если добавляем элемент, у которого нет родителей (корневой)
             treeList.add(storage);
@@ -88,12 +103,14 @@ public class StorageSync implements StorageDAO {
     }
 
 
-
-
     // удаляет объект из всех коллекций
     private void removeFromCollections(Storage storage) {
-        identityMap.remove(storage.getId());
-        if (storage.getParent() != null) {// если удаляем дочерний элемент
+        storage = identityMap.remove(storage.getId());
+        if (storage == null){
+            return;
+        }
+
+        if (storage.hasParent()) {// если удаляем дочерний элемент
             storage.getParent().remove(storage);// т.к. у каждого дочернего элемента есть ссылка на родительский - можно быстро удалять элемент из дерева без поиска по всему дереву
         } else {// если удаляем элемент, у которого нет родителей
             treeList.remove(storage);
@@ -101,16 +118,21 @@ public class StorageSync implements StorageDAO {
     }
 
     @Override
-    public boolean add(Storage storage) {
+    public boolean add(Storage storage) throws SQLException {
 
         if (storageDAO.add(storage)) {// если в БД добавилось нормально
             addToCollections(storage);
             return true;
-        }else{// откатываем добавление
+        } else {// откатываем добавление
             // для отката можно использовать паттерн Command (для функции Undo)
         }
 
         return false;
+    }
+
+    @Override
+    public List<Storage> search(String... params) {
+        return storageDAO.search(params);
     }
 
 
@@ -123,7 +145,7 @@ public class StorageSync implements StorageDAO {
     @Override
     public boolean addCurrency(Storage storage, Currency currency, BigDecimal initAmount) throws CurrencyException {
         if (storageDAO.addCurrency(storage, currency, initAmount)) {// если в БД добавилось нормально
-            storage.addCurrency(currency, initAmount);
+            identityMap.get(storage.getId()).addCurrency(currency, initAmount);
             return true;
         }
 
@@ -133,7 +155,7 @@ public class StorageSync implements StorageDAO {
     @Override
     public boolean deleteCurrency(Storage storage, Currency currency) throws CurrencyException {
         if (storageDAO.deleteCurrency(storage, currency)) {// если в БД удалилось нормально
-            storage.deleteCurrency(currency);
+            identityMap.get(storage.getId()).deleteCurrency(currency);
             return true;
         }
 
@@ -144,7 +166,7 @@ public class StorageSync implements StorageDAO {
     public boolean updateAmount(Storage storage, Currency currency, BigDecimal amount) {
         if (storageDAO.updateAmount(storage, currency, amount)) {
             try {
-                storage.updateAmount(amount, currency);
+                identityMap.get(storage.getId()).updateAmount(amount, currency);
             } catch (CurrencyException e) {
                 e.printStackTrace();
             } catch (AmountException e) {
@@ -156,7 +178,28 @@ public class StorageSync implements StorageDAO {
         return false;
     }
 
+    @Override
+    public int getRefCount(Storage storage) {
+        return storageDAO.getRefCount(storage);
+    }
+
+    public BigDecimal getTotalBalance(Currency currency) {
+        BigDecimal sum = BigDecimal.ZERO;
+
+        for (Storage s : treeList) {
+            try {
+                sum = sum.add(s.getApproxAmount(currency));
+            } catch (CurrencyException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return sum;
+    }
+
     public Map<Long, Storage> getIdentityMap() {
         return identityMap;
     }
+
+
 }

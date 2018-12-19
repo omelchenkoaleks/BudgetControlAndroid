@@ -3,21 +3,31 @@ package com.omelchenkoaleks.core.exceptions;
 public class CurrencyException extends Exception {
 
     public CurrencyException() {
+        super();
+        // TODO Auto-generated constructor stub
     }
 
-    public CurrencyException(String s) {
-        super(s);
+    public CurrencyException(String message, Throwable cause, boolean enableSuppression,
+                             boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
+        // TODO Auto-generated constructor stub
     }
 
-    public CurrencyException(String s, Throwable throwable) {
-        super(s, throwable);
+    public CurrencyException(String message, Throwable cause) {
+        super(message, cause);
+        // TODO Auto-generated constructor stub
     }
 
-    public CurrencyException(Throwable throwable) {
-        super(throwable);
+    public CurrencyException(String message) {
+        super(message);
+        // TODO Auto-generated constructor stub
     }
 
-    public CurrencyException(String s, Throwable throwable, boolean b, boolean b1) {
-        super(s, throwable, b, b1);
+    public CurrencyException(Throwable cause) {
+        super(cause);
+        // TODO Auto-generated constructor stub
     }
+
+
+
 }

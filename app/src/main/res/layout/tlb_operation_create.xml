@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<LinearLayout
+
+    android:layout_gravity="center_horizontal"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:baselineAligned="false"
+
+    android:gravity="center"
+    >
+
+    <Button
+        android:id="@+id/btn_add_income"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/add_income"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:textColor="@android:color/secondary_text_dark"
+        />
+
+    <Button
+        android:id="@+id/btn_add_outcome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/add_outcome"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:textColor="@android:color/secondary_text_dark"
+
+        />
+
+    <Button
+        android:id="@+id/btn_add_transfer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/add_transfer"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:textColor="@android:color/secondary_text_dark"
+
+        />
+
+    <Button
+        android:id="@+id/btn_add_convert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/add_convert"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:textColor="@android:color/secondary_text_dark"
+
+        />
+
+
+
+</LinearLayout>
+

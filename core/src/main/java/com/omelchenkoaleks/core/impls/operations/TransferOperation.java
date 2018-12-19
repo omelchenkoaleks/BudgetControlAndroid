@@ -7,8 +7,8 @@ import com.omelchenkoaleks.core.interfaces.Storage;
 import java.math.BigDecimal;
 import java.util.Currency;
 
-// TODO: для всех классов создать конструкторы без поля id, т.к. у  нас будет autoincrement
-public class TransferOperation extends AbstractOperation {
+// перевод из одного хранилища в другое в одной валюте
+public class TransferOperation extends AbstractOperation{
 
     public TransferOperation() {
         super(OperationType.TRANSFER);

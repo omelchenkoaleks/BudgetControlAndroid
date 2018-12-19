@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/node_main_layout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/ripple_rectangle"
+
+
+    >
+
+    <com.malinskiy.superrecyclerview.swipe.SwipeLayout xmlns:swipe="http://schemas.android.com/apk/res-auto"
+        android:id="@id/recyclerview_swipe"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/ripple_rectangle"
+
+        >
+
+        <LinearLayout xmlns:custom="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorSwipeBackground"
+            android:gravity="center"
+
+
+            >
+
+            <ImageView
+                android:id="@+id/img_swipe_add_child_node"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:background="@drawable/ripple_oval_gray"
+                android:padding="10dp"
+                android:src="@drawable/ic_add_circle"
+                android:tint="@android:color/white" />
+
+
+            <ImageView
+                android:id="@+id/img_swipe_edit_node"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:background="@drawable/ripple_oval_gray"
+                android:padding="10dp"
+                android:src="@drawable/ic_edit_35"
+                android:tint="@android:color/white"
+
+
+                />
+
+            <ImageView
+                android:id="@+id/img_swipe_delete_node"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginRight="15dp"
+                android:background="@drawable/ripple_oval_gray"
+                android:padding="10dp"
+                android:src="@drawable/ic_delete_circle"
+                android:tint="@android:color/white"
+
+
+                />
+
+
+        </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="70dp">
+
+            <ImageView
+                android:id="@+id/img_node_icon"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="15dp"
+
+                />
+
+            <TextView
+                android:id="@+id/tv_node_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="15dp"
+                android:layout_toRightOf="@id/img_node_icon"
+                android:text="value"
+                android:textSize="17sp"
+
+                />
+
+
+            <LinearLayout
+                android:id="@+id/layout_show_childs"
+                android:layout_width="60dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentRight="true"
+                android:background="@drawable/ripple_rectangle"
+                android:gravity="center"
+
+
+                >
+
+                <ImageView
+                    android:id="@+id/img_node_show_childs"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+
+                    android:src="@drawable/ic_keyboard_arrow_right"
+                    android:tint="@color/colorGray"
+
+                    />
+
+            </LinearLayout>
+
+
+            <ImageView
+                android:id="@+id/img_node_popup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="20dp"
+                android:layout_toLeftOf="@id/layout_show_childs"
+                android:background="@drawable/ripple_oval_gray"
+                android:src="@drawable/ic_more"
+                android:tint="@color/colorText"
+                android:visibility="gone"
+
+                />
+
+            <TextView
+                android:id="@+id/tv_node_child_count"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="15dp"
+                android:layout_toLeftOf="@id/img_node_popup"
+                android:background="@color/colorGray"
+                android:text="10"
+                android:textAlignment="center"
+                android:textColor="@android:color/white" />
+
+
+            <TextView
+                android:id="@+id/tv_node_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@id/tv_node_name"
+
+                android:layout_centerVertical="true"
+                android:layout_marginRight="25dp"
+                android:layout_toLeftOf="@id/tv_node_child_count"
+                android:textColor="@color/colorGray"
+                android:textSize="17sp"
+                android:visibility="gone" />
+
+            <View
+                android:id="@+id/line_separator"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_alignStart="@id/tv_node_name"
+                android:layout_below="@id/img_node_icon"
+                android:layout_gravity="bottom"
+                android:layout_marginTop="12dp"
+                android:background="@color/colorGray" />
+
+
+        </RelativeLayout>
+    </com.malinskiy.superrecyclerview.swipe.SwipeLayout>
+
+
+</RelativeLayout>

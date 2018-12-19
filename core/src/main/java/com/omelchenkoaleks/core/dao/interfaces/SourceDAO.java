@@ -7,6 +7,10 @@ import java.util.List;
 
 public interface SourceDAO extends CommonDAO<Source> {
 
-    // получить список корневыъ элементов деревьев для определенного типа операции
-    List<Source> getList(OperationType operationType);
+    String SOURCE_TABLE = "source";
+
+    List<Source> getList(OperationType operationType);// получить список корневых элементов деревьев для определенного типа операции
+    int getRefCount(Source source);
+
+
 }

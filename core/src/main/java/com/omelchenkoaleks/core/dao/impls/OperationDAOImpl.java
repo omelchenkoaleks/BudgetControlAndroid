@@ -1,5 +1,6 @@
 package com.omelchenkoaleks.core.dao.impls;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -14,6 +15,8 @@ import java.util.logging.Logger;
 
 import com.omelchenkoaleks.core.abstracts.AbstractOperation;
 import com.omelchenkoaleks.core.dao.interfaces.OperationDAO;
+import com.omelchenkoaleks.core.dao.interfaces.SourceDAO;
+import com.omelchenkoaleks.core.dao.interfaces.StorageDAO;
 import com.omelchenkoaleks.core.database.SQLiteConnection;
 import com.omelchenkoaleks.core.enums.OperationType;
 import com.omelchenkoaleks.core.impls.operations.ConvertOperation;
@@ -26,7 +29,6 @@ import com.omelchenkoaleks.core.interfaces.Storage;
 
 public class OperationDAOImpl implements OperationDAO {
 
-    private static final String OPERATION_TABLE = "operation";
     private List<Operation> operationList = new ArrayList<>();
 
     // чтобы эти объекты не получать еще раз из БД - передаем сюда
@@ -114,7 +116,7 @@ public class OperationDAOImpl implements OperationDAO {
 
                 operation.setFromSource(sourceIdentityMap.get(rs.getLong("from_source_id"))); // откуда поступили деньги
                 operation.setFromCurrency(Currency.getInstance(rs.getString("from_currency_code"))); // в какой валюте поступили
-                operation.setFromAmount(rs.getBigDecimal("from_amount")); // сумма поступления
+                operation.setFromAmount(new BigDecimal(rs.getDouble("from_amount"))); // сумма поступления
                 operation.setToStorage(storageIdentityMap.get(rs.getLong("to_storage_id")));// куда положим эти деньги
 
 
@@ -125,7 +127,7 @@ public class OperationDAOImpl implements OperationDAO {
 
                 operation.setFromStorage(storageIdentityMap.get(rs.getLong("from_storage_id"))); // откуда взяли деньги
                 operation.setFromCurrency(Currency.getInstance(rs.getString("from_currency_code")));// в какой валюте расход
-                operation.setFromAmount(rs.getBigDecimal("from_amount")); // сумма расхода
+                operation.setFromAmount(new BigDecimal(rs.getDouble("from_amount"))); // сумма расхода
                 operation.setToSource(sourceIdentityMap.get(rs.getLong("to_source_id")));// на что потратили
 
 
@@ -137,7 +139,7 @@ public class OperationDAOImpl implements OperationDAO {
 
                 operation.setFromStorage(storageIdentityMap.get(rs.getLong("from_storage_id")));// откуда переводим
                 operation.setFromCurrency(Currency.getInstance(rs.getString("from_currency_code"))); // в какой валюте переводим
-                operation.setFromAmount(rs.getBigDecimal("from_amount")); // какую сумму переводим
+                operation.setFromAmount(new BigDecimal(rs.getDouble("from_amount"))); // какую сумму переводим
                 operation.setToStorage(storageIdentityMap.get(rs.getLong("to_storage_id"))); // не создаем новый объект, используем ранее созданный объект источника
 
                 return operation;
@@ -148,12 +150,12 @@ public class OperationDAOImpl implements OperationDAO {
 
                 operation.setFromStorage(storageIdentityMap.get(rs.getLong("from_storage_id"))); // откуда конвертируем
                 operation.setFromCurrency(Currency.getInstance(rs.getString("from_currency_code"))); // в каой валюте
-                operation.setFromAmount(rs.getBigDecimal("from_amount")); // какая сумма в исходной валюте
+                operation.setFromAmount(new BigDecimal(rs.getDouble("from_amount"))); // какая сумма в исходной валюте
 
 
                 operation.setToStorage(storageIdentityMap.get(rs.getLong("to_storage_id"))); // куда конвертируем
                 operation.setToCurrency((Currency.getInstance(rs.getString("to_currency_code")))); // валюта поступления
-                operation.setToAmount(rs.getBigDecimal("to_amount")); // какая итоговая сумма поступила в этой валюте
+                operation.setToAmount(new BigDecimal(rs.getDouble("to_amount"))); // какая итоговая сумма поступила в этой валюте
 
 
                 return operation;
@@ -168,12 +170,13 @@ public class OperationDAOImpl implements OperationDAO {
 
 
     @Override
-    public boolean update(Operation operation) {
-        return false;
+    // при обновлении не даем менять тип операции - только данные самой операции (дата, суммы, источники, хранилища, описание)
+    public boolean update(Operation operation) throws SQLException{
+        return (delete(operation) && add(operation));// при обновлении - удаляем старую операцию, добавляем новую, т.к. могут поменяться хранилища, источники
     }
 
     @Override
-    public boolean delete(Operation operation) {
+    public boolean delete(Operation operation) throws SQLException{
         // TODO реализовать - если есть ли операции по данному хранилищу - запрещать удаление
         try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("delete from " + OPERATION_TABLE + " where id=?");) {
 
@@ -182,9 +185,6 @@ public class OperationDAOImpl implements OperationDAO {
             if (stmt.executeUpdate() == 1) {
                 return true;
             }
-
-        } catch (SQLException e) {
-            Logger.getLogger(SourceDAOImpl.class.getName()).log(Level.SEVERE, null, e);
         }
 
         return false;
@@ -194,10 +194,13 @@ public class OperationDAOImpl implements OperationDAO {
     public boolean add(Operation operation) {
 
 
-        String sql = createSql(operation.getOperationType()); // подготовить sql с нужными параметрами, в зависимости от типа операции
+        String sql = createInsertSql(operation); // подготовить sql с нужными параметрами, в зависимости от типа операции
 
 
-        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);) {
+        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement(sql);
+             Statement stmtId = SQLiteConnection.getConnection().createStatement();
+
+        ) {
 
             // общие поля для всех типов операций
             stmt.setLong(1, operation.getDateTime().getTimeInMillis());
@@ -212,8 +215,9 @@ public class OperationDAOImpl implements OperationDAO {
 
                     stmt.setLong(4, incomeOperation.getFromSource().getId());
                     stmt.setString(5, incomeOperation.getFromCurrency().getCurrencyCode());
-                    stmt.setBigDecimal(6, incomeOperation.getFromAmount());
+                    stmt.setDouble(6, incomeOperation.getFromAmount().doubleValue());
                     stmt.setLong(7, incomeOperation.getToStorage().getId());
+
                     break;
 
                 case OUTCOME:
@@ -221,7 +225,7 @@ public class OperationDAOImpl implements OperationDAO {
 
                     stmt.setLong(4, outcomeOperation.getFromStorage().getId());
                     stmt.setString(5, outcomeOperation.getFromCurrency().getCurrencyCode());
-                    stmt.setBigDecimal(6, outcomeOperation.getFromAmount());
+                    stmt.setDouble(6, outcomeOperation.getFromAmount().doubleValue());
                     stmt.setLong(7, outcomeOperation.getToSource().getId());
                     break;
 
@@ -230,7 +234,7 @@ public class OperationDAOImpl implements OperationDAO {
 
                     stmt.setLong(4, transferOperation.getFromStorage().getId());
                     stmt.setString(5, transferOperation.getFromCurrency().getCurrencyCode());
-                    stmt.setBigDecimal(6, transferOperation.getFromAmount());
+                    stmt.setDouble(6, transferOperation.getFromAmount().doubleValue());
                     stmt.setLong(7, transferOperation.getToStorage().getId());
                     break;
 
@@ -239,24 +243,25 @@ public class OperationDAOImpl implements OperationDAO {
 
                     stmt.setLong(4, convertOperation.getFromStorage().getId());
                     stmt.setString(5, convertOperation.getFromCurrency().getCurrencyCode());
-                    stmt.setBigDecimal(6, convertOperation.getFromAmount());
+                    stmt.setDouble(6, convertOperation.getFromAmount().doubleValue());
                     stmt.setLong(7, convertOperation.getToStorage().getId());
                     stmt.setString(8, convertOperation.getToCurrency().getCurrencyCode());
-                    stmt.setBigDecimal(9, convertOperation.getToAmount());
+                    stmt.setDouble(9, convertOperation.getToAmount().doubleValue());
                     break;
             }
 
 
-
             if (stmt.executeUpdate() == 1) {// если объект добавился нормально
-                try (ResultSet rs = stmt.getGeneratedKeys()) {// получаем id вставленной записи
+
+                try (ResultSet rs = stmtId.executeQuery("SELECT last_insert_rowid()");) {// получаем id вставленной записи
 
                     if (rs.next()) {
                         operation.setId(rs.getLong(1));// не забываем просвоить новый id в объект
+                        return true;
                     }
 
-                    return true;
                 }
+
 
             }
 
@@ -268,11 +273,12 @@ public class OperationDAOImpl implements OperationDAO {
     }
 
 
-    private String createSql(OperationType operationType) {
+
+    private String createInsertSql(Operation operation) {
 
         StringBuilder sb = new StringBuilder("insert into " + OPERATION_TABLE + " (datetime, type_id, description, ");// sql собирается частями, в зависимости от типа операции
 
-        switch (operationType) {
+        switch (operation.getOperationType()) {
             case INCOME:
                 return sb.append("from_source_id, from_currency_code, from_amount, to_storage_id) values(?,?,?,?,?,?,?)").toString();
             case OUTCOME:
@@ -305,6 +311,47 @@ public class OperationDAOImpl implements OperationDAO {
                 }
 
                 return operationList;// должен содержать только корневые элементы
+
+            } catch (SQLException e) {
+                Logger.getLogger(OperationDAOImpl.class.getName()).log(Level.SEVERE, null, e);
+            }
+
+
+        } catch (SQLException e) {
+            Logger.getLogger(OperationDAOImpl.class.getName()).log(Level.SEVERE, null, e);
+        }
+
+        return null;
+    }
+
+    @Override
+    public List<Operation> search(String... params) {
+        ArrayList<Operation> list = new ArrayList<>();// результаты поиска сохраняем во временную коллекцию (не operationList) - чтобы вы любое время можно было вернуться к исходным данным
+
+        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("select * from " + OPERATION_TABLE+
+                " where description like ? " +
+                "or from_source_id=(select id from "+ SourceDAO.SOURCE_TABLE +" where name like ?)" +
+                "or to_source_id=(select id from "+ SourceDAO.SOURCE_TABLE +" where name like ?)" +
+                "or from_storage_id=(select id from "+ StorageDAO.STORAGE_TABLE +" where name like?) " +
+                "or to_storage_id=(select id from "+ StorageDAO.STORAGE_TABLE +" where name like ?)")) {
+
+            String searchStr = "%"+params[0]+"%";
+
+            stmt.setString(1, searchStr);
+            stmt.setString(2, searchStr);
+            stmt.setString(3, searchStr);
+            stmt.setString(4, searchStr);
+            stmt.setString(5, searchStr);
+
+            try (ResultSet rs = stmt.executeQuery();) {
+
+                while (rs.next()) {
+
+                    list.add(fillOperation(rs));
+
+                }
+
+                return list;
 
             } catch (SQLException e) {
                 Logger.getLogger(OperationDAOImpl.class.getName()).log(Level.SEVERE, null, e);

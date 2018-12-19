@@ -1,6 +1,7 @@
 package com.omelchenkoaleks.core.decorator;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -18,8 +19,8 @@ import com.omelchenkoaleks.core.impls.operations.OutcomeOperation;
 import com.omelchenkoaleks.core.impls.operations.TransferOperation;
 import com.omelchenkoaleks.core.interfaces.Operation;
 
-//
-public class OperationSync implements OperationDAO {
+public class OperationSync extends AbstractSync<Operation> implements OperationDAO {
+
 
     private OperationDAO operationDAO;
 
@@ -41,8 +42,9 @@ public class OperationSync implements OperationDAO {
     }
 
 
-    public void init() {
+    private void init() {
         operationList = operationDAO.getAll();// запрос в БД происходит только один раз, чтобы заполнить коллекцию operationList
+
 
         for (Operation s : operationList) {
             identityMap.put(s.getId(), s);
@@ -73,23 +75,23 @@ public class OperationSync implements OperationDAO {
 
             // проход по коллекции только один раз
             for (Operation o : operationList) {
-                switch (o.getOperationType()){
-                    case INCOME:{
+                switch (o.getOperationType()) {
+                    case INCOME: {
                         incomeOperations.add(o);
                         break;
                     }
 
-                    case OUTCOME:{
+                    case OUTCOME: {
                         outcomeOperations.add(o);
                         break;
                     }
 
-                    case TRANSFER:{
+                    case TRANSFER: {
                         transferOperations.add(o);
                         break;
                     }
 
-                    case CONVERT:{
+                    case CONVERT: {
                         convertOperations.add(o);
                         break;
                     }
@@ -108,7 +110,6 @@ public class OperationSync implements OperationDAO {
 
     @Override
     public List<Operation> getAll() {
-        Collections.sort(operationList); // перед показом сортируем по дате
         return operationList;
     }
 
@@ -117,31 +118,32 @@ public class OperationSync implements OperationDAO {
         return identityMap.get(id);
     }
 
-
     @Override
-    /*
-        при обновлении операции:
-            откат предыдущих значений операции (удаление старой операции)
-            добавление новой информации (добавление обновленной операции)
-     */
-    public boolean update(Operation operation) {
-        if (delete(operationDAO.get(operation.getId())) && add(operation)) {
+//    При обновлении операции:
+//    - Откат предыдущих значений операции (удаление старой операции)
+//    - Добавление новой информации (добавление обновленной операции)
+    public boolean update(Operation operation) throws SQLException {// сюда объект попадает уже с обновленными значениями - а нам нужны еще и старые значения, чтобы их откатить
+
+        if (delete(operationDAO.get(operation.getId())) // старые значения берем из БД
+                && add(operation)) {// добавляем новые значения
+            updateRefCount(operation);
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean delete(Operation operation) {
+    public boolean delete(Operation operation) throws SQLException {
         // TODO добавить нужные Exceptions
         if (operationDAO.delete(operation) && revertBalance(operation)) {// если в БД удалилось нормально
             removeFromCollections(operation);
+            updateRefCount(operation);
             return true;
         }
         return false;
     }
 
-    private boolean revertBalance(Operation operation) {
+    private boolean revertBalance(Operation operation) throws SQLException {
         boolean updateAmountResult = false;
 
         try {
@@ -152,7 +154,9 @@ public class OperationSync implements OperationDAO {
 
                     IncomeOperation incomeOperation = (IncomeOperation) operation;
 
-                    BigDecimal currentAmount = incomeOperation.getToStorage().getAmount(incomeOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
+                    BigDecimal tmpAmount = storageSync.getIdentityMap().get(incomeOperation.getToStorage().getId()).getAmount(incomeOperation.getFromCurrency());
+
+                    BigDecimal currentAmount = (tmpAmount == null) ? BigDecimal.ZERO : tmpAmount; // получаем текущее значение остатка (баланса)
                     BigDecimal newAmount = currentAmount.subtract(incomeOperation.getFromAmount()); //прибавляем сумму операции
 
                     updateAmountResult = storageSync.updateAmount(incomeOperation.getToStorage(), incomeOperation.getFromCurrency(), newAmount);
@@ -164,7 +168,9 @@ public class OperationSync implements OperationDAO {
 
                     OutcomeOperation outcomeOperation = (OutcomeOperation) operation;
 
-                    BigDecimal currentAmount = outcomeOperation.getFromStorage().getAmount(outcomeOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
+                    BigDecimal tmpAmount = storageSync.getIdentityMap().get(outcomeOperation.getFromStorage().getId()).getAmount(outcomeOperation.getFromCurrency());
+
+                    BigDecimal currentAmount = (tmpAmount == null) ? BigDecimal.ZERO : tmpAmount; // получаем текущее значение остатка (баланса)
                     BigDecimal newAmount = currentAmount.add(outcomeOperation.getFromAmount()); //отнимаем сумму операции
 
                     updateAmountResult = storageSync.updateAmount(outcomeOperation.getFromStorage(), outcomeOperation.getFromCurrency(), newAmount);
@@ -177,12 +183,17 @@ public class OperationSync implements OperationDAO {
 
                     TransferOperation trasnferOperation = (TransferOperation) operation;
 
+
                     // для хранилища, откуда перевели деньги - отнимаем сумму операции
-                    BigDecimal currentAmountFromStorage = trasnferOperation.getFromStorage().getAmount(trasnferOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
+                    BigDecimal tmpAmount = storageSync.getIdentityMap().get(trasnferOperation.getFromStorage().getId()).getAmount(trasnferOperation.getFromCurrency());
+
+                    BigDecimal currentAmountFromStorage = (tmpAmount == null) ? BigDecimal.ZERO : tmpAmount;// получаем текущее значение остатка (баланса)
                     BigDecimal newAmountFromStorage = currentAmountFromStorage.add(trasnferOperation.getFromAmount()); //отнимаем сумму операции
 
                     // для хранилища, куда перевели деньги - прибавляем сумму операции
-                    BigDecimal currentAmountToStorage = trasnferOperation.getToStorage().getAmount(trasnferOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
+                    tmpAmount = storageSync.getIdentityMap().get(trasnferOperation.getToStorage().getId()).getAmount(trasnferOperation.getFromCurrency());
+
+                    BigDecimal currentAmountToStorage = (tmpAmount == null) ? BigDecimal.ZERO : tmpAmount;// получаем текущее значение остатка (баланса)
                     BigDecimal newAmountToStorage = currentAmountToStorage.subtract(trasnferOperation.getFromAmount()); //прибавляем сумму операции
 
 
@@ -197,11 +208,15 @@ public class OperationSync implements OperationDAO {
                     ConvertOperation convertOperation = (ConvertOperation) operation;
 
                     // для хранилища, откуда перевели деньги - отнимаем сумму операции
-                    BigDecimal currentAmountFromStorage = convertOperation.getFromStorage().getAmount(convertOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
+                    BigDecimal tmpAmount = storageSync.getIdentityMap().get(convertOperation.getFromStorage().getId()).getAmount(convertOperation.getFromCurrency());
+
+                    BigDecimal currentAmountFromStorage = (tmpAmount == null) ? BigDecimal.ZERO : tmpAmount;// получаем текущее значение остатка (баланса)
                     BigDecimal newAmountFromStorage = currentAmountFromStorage.add(convertOperation.getFromAmount()); // сколько отнимаем
 
                     // для хранилища, куда перевели деньги - прибавляем сумму операции
-                    BigDecimal currentAmountToStorage = convertOperation.getToStorage().getAmount(convertOperation.getToCurrency());// получаем текущее значение остатка (баланса)
+                    tmpAmount = storageSync.getIdentityMap().get(convertOperation.getToStorage().getId()).getAmount(convertOperation.getToCurrency());
+
+                    BigDecimal currentAmountToStorage = (tmpAmount == null) ? BigDecimal.ZERO : tmpAmount;// получаем текущее значение остатка (баланса)
                     BigDecimal newAmountToStorage = currentAmountToStorage.subtract(convertOperation.getToAmount()); // сколько прибавляем
 
 
@@ -229,116 +244,188 @@ public class OperationSync implements OperationDAO {
     private void removeFromCollections(Operation operation) {
         operationList.remove(operation);
         identityMap.remove(operation.getId());
-        operationDAO.getList(operation.getOperationType()).remove(operation);
+        operationMap.get(operation.getOperationType()).remove(operation);
     }
 
     @Override
     // При добавлении операции – нужно сначала добавить запись в БД, затем добавить новую операцию во все коллекции и обновить баланс соотв. хранилища
-    public boolean add(Operation operation) {
+    public boolean add(Operation operation) throws SQLException {
         if (operationDAO.add(operation)) {// если в БД добавился нормально
             addToCollections(operation);// добавляем в коллекции
 
-            boolean updateAmountResult = false;
+            if (updateBalance(operation)) {// если обновление баланса прошло успешно
 
-            try {
+                updateRefCount(operation);
 
-                // в зависимости от типа операции - обновляем баланс
-                switch (operation.getOperationType()) {
-                    case INCOME: { // доход
-
-                        IncomeOperation incomeOperation = (IncomeOperation) operation;
-
-                        BigDecimal currentAmount = incomeOperation.getToStorage().getAmount(incomeOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
-                        BigDecimal newAmount = currentAmount.add(incomeOperation.getFromAmount()); //прибавляем сумму операции
-
-                        // обновляем баланс
-                        updateAmountResult = storageSync.updateAmount(incomeOperation.getToStorage(), incomeOperation.getFromCurrency(), newAmount);
-
-                        break;// не забываем ставить break, чтобы следующие case не выполнялись
-
-                    }
-                    case OUTCOME: { // расход
-
-                        OutcomeOperation outcomeOperation = (OutcomeOperation) operation;
-
-                        BigDecimal currentAmount = outcomeOperation.getFromStorage().getAmount(outcomeOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
-                        BigDecimal newAmount = currentAmount.subtract(outcomeOperation.getFromAmount()); //отнимаем сумму операции
-
-                        // обновляем баланс
-                        updateAmountResult = storageSync.updateAmount(outcomeOperation.getFromStorage(), outcomeOperation.getFromCurrency(), newAmount);
-
-
-                        break;
-                    }
-
-                    case TRANSFER: { // перевод в одной валюте между хранилищами
-
-                        TransferOperation trasnferOperation = (TransferOperation) operation;
-
-                        // для хранилища, откуда перевели деньги - отнимаем сумму операции
-                        BigDecimal currentAmountFromStorage = trasnferOperation.getFromStorage().getAmount(trasnferOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
-                        BigDecimal newAmountFromStorage = currentAmountFromStorage.subtract(trasnferOperation.getFromAmount()); //отнимаем сумму операции
-
-                        // для хранилища, куда перевели деньги - прибавляем сумму операции
-                        BigDecimal currentAmountToStorage = trasnferOperation.getToStorage().getAmount(trasnferOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
-                        BigDecimal newAmountToStorage = currentAmountToStorage.add(trasnferOperation.getFromAmount()); //прибавляем сумму операции
-
-                        // обновляем баланс в обоих хранилищах
-                        updateAmountResult = storageSync.updateAmount(trasnferOperation.getFromStorage(), trasnferOperation.getFromCurrency(), newAmountFromStorage) &&
-                                storageSync.updateAmount(trasnferOperation.getToStorage(), trasnferOperation.getFromCurrency(), newAmountToStorage);// для успешного результата - оба обновления должны вернуть true
-
-                        break;
-
-                    }
-
-                    case CONVERT: { // конвертация из любой валюты в любую между хранилищами
-                        ConvertOperation convertOperation = (ConvertOperation) operation;
-
-                        // для хранилища, откуда перевели деньги - отнимаем сумму операции
-                        BigDecimal currentAmountFromStorage = convertOperation.getFromStorage().getAmount(convertOperation.getFromCurrency());// получаем текущее значение остатка (баланса)
-                        BigDecimal newAmountFromStorage = currentAmountFromStorage.subtract(convertOperation.getFromAmount()); // сколько отнимаем
-
-                        // для хранилища, куда перевели деньги - прибавляем сумму операции
-                        BigDecimal currentAmountToStorage = convertOperation.getToStorage().getAmount(convertOperation.getToCurrency());// получаем текущее значение остатка (баланса)
-                        BigDecimal newAmountToStorage = currentAmountToStorage.add(convertOperation.getToAmount()); // сколько прибавляем
-
-
-                        // обновляем баланс в обоих хранилищах
-                        updateAmountResult = storageSync.updateAmount(convertOperation.getFromStorage(), convertOperation.getFromCurrency(), newAmountFromStorage) &&
-                                storageSync.updateAmount(convertOperation.getToStorage(), convertOperation.getToCurrency(), newAmountToStorage);// для успешного результата - оба обновления должны вернуть true
-
-                        break;
-                    }
-
-
-                }
-
-            } catch (CurrencyException e) {
-                e.printStackTrace();
+                return true;
             }
-
-            if (!updateAmountResult) {
-                delete(operation);// откатываем созданную операцию
-                return false;
-            }
-
-            return true;
 
         }
         return false;
+    }
+
+    private void updateRefCount(Operation operation) {
+
+        switch (operation.getOperationType()){
+            case OUTCOME:
+                OutcomeOperation outcomeOperation = (OutcomeOperation) operation;
+                storageSync.getIdentityMap().get(outcomeOperation.getFromStorage().getId()).setRefCount(storageSync.getRefCount(outcomeOperation.getFromStorage()));
+                sourceSync.getIdentityMap().get(outcomeOperation.getToSource().getId()).setRefCount(sourceSync.getRefCount(outcomeOperation.getToSource()));
+
+
+                break;
+
+            case INCOME:
+                IncomeOperation incomeOperation = (IncomeOperation) operation;
+
+                storageSync.getIdentityMap().get(incomeOperation.getToStorage().getId()).setRefCount(storageSync.getRefCount(incomeOperation.getToStorage()));
+                sourceSync.getIdentityMap().get(incomeOperation.getFromSource().getId()).setRefCount(sourceSync.getRefCount(incomeOperation.getFromSource()));
+
+
+                break;
+
+
+            case TRANSFER:
+                TransferOperation transferOperation = (TransferOperation) operation;
+
+                storageSync.getIdentityMap().get(transferOperation.getToStorage().getId()).setRefCount(storageSync.getRefCount(transferOperation.getToStorage()));
+                storageSync.getIdentityMap().get(transferOperation.getFromStorage().getId()).setRefCount(storageSync.getRefCount(transferOperation.getFromStorage()));
+
+
+                break;
+
+
+            case CONVERT:
+                ConvertOperation convertOperation = (ConvertOperation) operation;
+
+                storageSync.getIdentityMap().get(convertOperation.getToStorage().getId()).setRefCount(storageSync.getRefCount(convertOperation.getToStorage()));
+                storageSync.getIdentityMap().get(convertOperation.getFromStorage().getId()).setRefCount(storageSync.getRefCount(convertOperation.getFromStorage()));
+
+
+                break;
+
+
+        }
+
+    }
+
+    private boolean updateBalance(Operation operation) throws SQLException {
+        boolean updateAmountResult = false;
+
+        try {
+
+            // в зависимости от типа операции - обновляем баланс
+            switch (operation.getOperationType()) {
+                case INCOME: { // доход
+
+                    IncomeOperation incomeOperation = (IncomeOperation) operation;
+
+                    BigDecimal tmpAmount = incomeOperation.getToStorage().getAmount(incomeOperation.getFromCurrency());
+
+                    BigDecimal currentAmount = tmpAmount != null ? tmpAmount : BigDecimal.ZERO;// получаем текущее значение остатка (баланса)
+                    BigDecimal newAmount = currentAmount.add(incomeOperation.getFromAmount()); //прибавляем сумму операции
+
+                    // обновляем баланс
+                    updateAmountResult = storageSync.updateAmount(incomeOperation.getToStorage(), incomeOperation.getFromCurrency(), newAmount);
+
+                    break;// не забываем ставить break, чтобы следующие case не выполнялись
+
+                }
+                case OUTCOME: { // расход
+
+                    OutcomeOperation outcomeOperation = (OutcomeOperation) operation;
+
+                    BigDecimal tmpAmount = outcomeOperation.getFromStorage().getAmount(outcomeOperation.getFromCurrency());
+
+                    BigDecimal currentAmount = tmpAmount != null ? tmpAmount : BigDecimal.ZERO;
+                    ;// получаем текущее значение остатка (баланса)
+                    BigDecimal newAmount = currentAmount.subtract(outcomeOperation.getFromAmount()); //отнимаем сумму операции
+
+                    // обновляем баланс
+                    updateAmountResult = storageSync.updateAmount(outcomeOperation.getFromStorage(), outcomeOperation.getFromCurrency(), newAmount);
+
+
+                    break;
+                }
+
+                case TRANSFER: { // перевод в одной валюте между хранилищами
+
+                    TransferOperation trasnferOperation = (TransferOperation) operation;
+
+                    // для хранилища, откуда перевели деньги - отнимаем сумму операции
+                    BigDecimal tmpAmount = trasnferOperation.getFromStorage().getAmount(trasnferOperation.getFromCurrency());
+                    BigDecimal currentAmountFromStorage = tmpAmount != null ? tmpAmount : BigDecimal.ZERO;// получаем текущее значение остатка (баланса)
+                    BigDecimal newAmountFromStorage = currentAmountFromStorage.subtract(trasnferOperation.getFromAmount()); //отнимаем сумму операции
+
+                    // для хранилища, куда перевели деньги - прибавляем сумму операции
+                    tmpAmount = trasnferOperation.getToStorage().getAmount(trasnferOperation.getFromCurrency());
+                    BigDecimal currentAmountToStorage = tmpAmount != null ? tmpAmount : BigDecimal.ZERO; // получаем текущее значение остатка (баланса)
+                    BigDecimal newAmountToStorage = currentAmountToStorage.add(trasnferOperation.getFromAmount()); //прибавляем сумму операции
+
+                    // обновляем баланс в обоих хранилищах
+                    updateAmountResult = storageSync.updateAmount(trasnferOperation.getFromStorage(), trasnferOperation.getFromCurrency(), newAmountFromStorage) &&
+                            storageSync.updateAmount(trasnferOperation.getToStorage(), trasnferOperation.getFromCurrency(), newAmountToStorage);// для успешного результата - оба обновления должны вернуть true
+
+                    break;
+
+                }
+
+                case CONVERT: { // конвертация из любой валюты в любую между хранилищами
+                    ConvertOperation convertOperation = (ConvertOperation) operation;
+
+                    // для хранилища, откуда перевели деньги - отнимаем сумму операции
+                    BigDecimal tmpAmount = convertOperation.getFromStorage().getAmount(convertOperation.getFromCurrency());
+                    BigDecimal currentAmountFromStorage = (tmpAmount != null) ? tmpAmount : BigDecimal.ZERO;// получаем текущее значение остатка (баланса)
+                    BigDecimal newAmountFromStorage = currentAmountFromStorage.subtract(convertOperation.getFromAmount()); // сколько отнимаем
+
+                    // для хранилища, куда перевели деньги - прибавляем сумму операции
+                    tmpAmount = convertOperation.getToStorage().getAmount(convertOperation.getToCurrency());
+                    BigDecimal currentAmountToStorage = (tmpAmount != null) ? tmpAmount : BigDecimal.ZERO;// получаем текущее значение остатка (баланса)
+                    BigDecimal newAmountToStorage = currentAmountToStorage.add(convertOperation.getToAmount()); // сколько прибавляем
+
+
+                    // обновляем баланс в обоих хранилищах
+                    updateAmountResult = storageSync.updateAmount(convertOperation.getFromStorage(), convertOperation.getFromCurrency(), newAmountFromStorage) &&
+                            storageSync.updateAmount(convertOperation.getToStorage(), convertOperation.getToCurrency(), newAmountToStorage);// для успешного результата - оба обновления должны вернуть true
+
+                    break;
+                }
+
+
+            }
+
+        } catch (CurrencyException e) {
+            e.printStackTrace();
+        }
+
+        if (!updateAmountResult) {
+            delete(operation);// откатываем созданную операцию
+            return false;
+        }
+        return true;
     }
 
 
     private void addToCollections(Operation operation) {
         operationList.add(operation);
         identityMap.put(operation.getId(), operation);
-        operationDAO.getList(operation.getOperationType()).add(operation);
+        operationMap.get(operation.getOperationType()).add(operation);
     }
 
 
     @Override
     public List<Operation> getList(OperationType operationType) {
         return operationMap.get(operationType);
+    }
+
+    @Override
+    public List<Operation> search(String... params) {
+//        try {
+//            Thread.sleep(1000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+        return operationDAO.search(params);
     }
 
 

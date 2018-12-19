@@ -1,5 +1,6 @@
 package com.omelchenkoaleks.core.decorator;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -12,7 +13,7 @@ import com.omelchenkoaleks.core.enums.OperationType;
 import com.omelchenkoaleks.core.interfaces.Source;
 import com.omelchenkoaleks.core.utils.TreeUtils;
 
-public class SourceSync implements SourceDAO {
+public class SourceSync extends AbstractSync<Source> implements SourceDAO {
 
     private TreeUtils<Source> treeUtils = new TreeUtils();// построитель дерева
 
@@ -21,6 +22,7 @@ public class SourceSync implements SourceDAO {
     private List<Source> treeList = new ArrayList<>(); // хранит деревья объектов без разделения по типам операции
     private Map<OperationType, List<Source>> sourceMap = new EnumMap<>(OperationType.class); // деревья объектов с разделением по типам операции
     private Map<Long, Source> identityMap = new HashMap<>(); // нет деревьев, каждый объект хранится отдельно, нужно для быстрого доступа к любому объекту по id (чтобы каждый раз не использовать перебор по всей коллекции List и не обращаться к бд)
+    private String[] sourceArray;
 
     private SourceDAO sourceDAO;// реализация слоя работы с БД
 
@@ -34,7 +36,7 @@ public class SourceSync implements SourceDAO {
 
         for (Source s : sourceList) {
             identityMap.put(s.getId(), s);
-            treeUtils.addToTree(s.getParentId(), s, treeList);
+            treeUtils.addToTree(s.getParentId(), s, treeList, sourceList);
         }
 
         // важно - сначала построить деревья, уже потом разделять по типам операции
@@ -43,10 +45,12 @@ public class SourceSync implements SourceDAO {
 
     }
 
+
+
     private void fillSourceMap(List<Source> list) {
 
 
-        // TODO когда начнется поддержка Java 8 для Android - использовать этот код
+//        // TODO когда начнется поддержка Java 8 для Android - использовать этот код
 //        for (OperationType type : OperationType.values()) {
 //            // используем lambda выражение для фильтрации
 //            sourceMap.put(type, list.stream().filter(s -> s.getOperationType() == type).collect(Collectors.toList()));
@@ -94,6 +98,12 @@ public class SourceSync implements SourceDAO {
     }
 
     @Override
+    public int getRefCount(Source source){
+        return sourceDAO.getRefCount(source);
+    }
+
+
+    @Override
     public List<Source> getAll() {// возвращает объекты уже в виде деревьев
         return treeList;
     }
@@ -105,15 +115,24 @@ public class SourceSync implements SourceDAO {
 
 
     @Override
-    public boolean update(Source source) {
+    public boolean update(Source source) throws SQLException {
         if (sourceDAO.update(source)) {
+
+            Source s = identityMap.get(source.getId());
+
+            // данные обновлятся сразу во всех коллекциях, т.к. они ссылаются на один и тот же объект
+            // не нужно пробегать по всем коллекциям и обновлять в них
+            s.setName(source.getName());
+            s.setIconName(source.getIconName());
+
             return true;
         }
         return false;
     }
 
+
     @Override
-    public boolean delete(Source source) {
+    public boolean delete(Source source) throws SQLException{
         // TODO добавить нужные Exceptions
         if (sourceDAO.delete(source)) {
             removeFromCollections(source);
@@ -124,11 +143,13 @@ public class SourceSync implements SourceDAO {
     }
 
     private void addToCollections(Source source) {
-        identityMap.put(source.getId(), source);
+
+        identityMap.put(source.getId(), source); // в identityMap попадают все - и корневые и дочерние элементы, т.к. все хранится в плоском виде
 
         if (source.hasParent()) {
-            if (!source.getParent().getChilds().contains(source)) {// если ранее не был добавлен уже
-                source.getParent().add(source);
+            Source parent = identityMap.get(source.getParent().getId());
+            if (!parent.getChilds().contains(source)) {// если ранее не был добавлен уже
+                parent.add(source);
             }
         } else {// если добавляем элемент, у которого нет родителей (корневой)
             sourceMap.get(source.getOperationType()).add(source);
@@ -137,7 +158,10 @@ public class SourceSync implements SourceDAO {
     }
 
     private void removeFromCollections(Source source) {
-        identityMap.remove(source.getId());
+        source = identityMap.remove(source.getId());
+        if (source==null){
+            return;
+        }
 
         if (source.hasParent()) {// если удаляем дочерний элемент
             source.getParent().remove(source);// т.к. у каждого дочернего элемента есть ссылка на родительский - можно быстро удалять элемент из дерева без поиска по всему дереву
@@ -148,13 +172,18 @@ public class SourceSync implements SourceDAO {
     }
 
     @Override
-    public boolean add(Source source) {
+    public boolean add(Source source) throws SQLException{
         if (sourceDAO.add(source)) {// если в БД добавился нормально
             addToCollections(source);
             return true;
 
         }
         return false;
+    }
+
+    @Override
+    public List<Source> search(String... params) {
+        return sourceDAO.search(params);
     }
 
 
@@ -172,4 +201,8 @@ public class SourceSync implements SourceDAO {
     public Map<Long, Source> getIdentityMap() {
         return identityMap;
     }
+
+
+
+
 }

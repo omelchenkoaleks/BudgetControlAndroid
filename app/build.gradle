@@ -20,6 +20,16 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    sourceSets {
+
+        main.res.srcDirs += ['src/main/res/icons']
+
+//        menu_search.java.srcDirs = ['...']
+//        menu_search.assets.srcDirs = ['...']
+//        test.java.srcDirs = ['...']
+    }
+
 }
 
 dependencies {
@@ -35,4 +45,16 @@ dependencies {
     implementation 'org.sqldroid:sqldroid:1.0.3'
     implementation 'com.jpardogo.googleprogressbar:library:1.2.0'
     implementation 'com.android.support:recyclerview-v7:28.0.0'
+    implementation 'net.steamcrafted:materialiconlib:1.1.5'
+    implementation 'com.yqritc:recyclerview-flexibledivider:1.4.0'
+    implementation 'com.malinskiy:superrecyclerview:1.1.2'
+    implementation 'com.miguelcatalan:materialsearchview:1.4.0'
+    implementation 'jp.wasabeef:recyclerview-animators:1.2.2'
+    implementation 'com.github.clans:fab:1.6.4'
+}
+
+repositories {
+    maven {
+        url "https://jitpack.io"
+    }
 }

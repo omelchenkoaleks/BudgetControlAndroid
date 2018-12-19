@@ -21,7 +21,6 @@ import com.omelchenkoaleks.core.interfaces.Source;
 // реализация DAO не должна заниматься лишними делами - только связь с БД, заполнение объектов
 public class SourceDAOImpl implements SourceDAO {
 
-    private static final String SOURCE_TABLE = "source";
     private List<Source> sourceList = new ArrayList<>();// хранит все элементы сплошным списком, без разделения по деревьям и пр.
 
 
@@ -33,12 +32,7 @@ public class SourceDAOImpl implements SourceDAO {
              ResultSet rs = stmt.executeQuery("select * from " + SOURCE_TABLE + " order by parent_id");) {
 
             while (rs.next()) {
-                DefaultSource source = new DefaultSource();
-                source.setId(rs.getLong("id"));
-                source.setName(rs.getString("name"));
-                source.setParentId(rs.getLong("parent_id"));
-                source.setOperationType(OperationType.getType(rs.getInt("operation_type_id")));
-                sourceList.add(source);
+                sourceList.add(fillSource(rs));
             }
 
             return sourceList;// должен содержать только корневые элементы
@@ -48,6 +42,27 @@ public class SourceDAOImpl implements SourceDAO {
         }
 
         return null;
+    }
+
+
+    public int getRefCount(Source source){
+        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("select ref_count from " + SOURCE_TABLE + " where id=?");) {
+
+            stmt.setLong(1, source.getId());
+
+            try (ResultSet rs = stmt.executeQuery();) {
+
+                if (rs.next()) {
+                    return rs.getInt("ref_count");
+                }
+
+            }
+
+        } catch (SQLException e) {
+            Logger.getLogger(SourceDAOImpl.class.getName()).log(Level.SEVERE, null, e);
+        }
+
+        return -1;
     }
 
     @Override
@@ -61,11 +76,7 @@ public class SourceDAOImpl implements SourceDAO {
                 DefaultSource source = null;
 
                 if (rs.next()) {
-                    source = new DefaultSource();
-                    source.setId(rs.getLong("id"));
-                    source.setName(rs.getString("name"));
-                    source.setParentId(rs.getLong("parent_id"));
-                    source.setOperationType(OperationType.getType(rs.getInt("operation_type_id")));
+                    source = fillSource(rs);
                 }
 
                 return source;
@@ -78,14 +89,33 @@ public class SourceDAOImpl implements SourceDAO {
         return null;
     }
 
+    // заполняет объект source
+    private DefaultSource fillSource(ResultSet rs) throws SQLException {
+
+
+        DefaultSource source = new DefaultSource();
+        source.setId(rs.getLong("id"));
+        source.setName(rs.getString("name"));
+        source.setParentId(rs.getLong("parent_id"));// поле используется для первичного построения дерева - в дальнейшем лучше использовать получение объекта getParent
+        source.setIconName(rs.getString("icon_name"));
+        source.setOperationType(OperationType.getType(rs.getInt("operation_type_id")));
+        source.setRefCount(rs.getInt("ref_count"));
+
+        return source;
+    }
+
+
 
     @Override
     public boolean update(Source source) {
         // для упрощения - у хранилища даем изменить только название, изменять parent_id нельзя (для этого можно удалить и заново создать)
-        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("update " + SOURCE_TABLE + " set name=? where id=?");) {
+        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("update " + SOURCE_TABLE + " set name=?, icon_name=? where id=?");) {
 
             stmt.setString(1, source.getName());// у созданного элемента - разрешаем менять только название
-            stmt.setLong(2, source.getId());
+            stmt.setString(2, source.getIconName());
+            stmt.setLong(3, source.getId());
+
+
 
             // не даем обновлять operationType - тип устанавливается только один раз при создании корневеого элемента
 
@@ -101,7 +131,7 @@ public class SourceDAOImpl implements SourceDAO {
     }
 
     @Override
-    public boolean delete(Source source) {
+    public boolean delete(Source source) throws SQLException {
         // TODO реализовать - если есть ли операции по данному хранилищу - запрещать удаление
         try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("delete from " + SOURCE_TABLE + " where id=?");) {
 
@@ -110,10 +140,8 @@ public class SourceDAOImpl implements SourceDAO {
             if (stmt.executeUpdate() == 1) {
                 return true;
             }
-
-        } catch (SQLException e) {
-            Logger.getLogger(SourceDAOImpl.class.getName()).log(Level.SEVERE, null, e);
         }
+
 
         return false;
     }
@@ -121,26 +149,31 @@ public class SourceDAOImpl implements SourceDAO {
     @Override
     // добавляет объект в БД и присваивает ему сгенерированный id
     public boolean add(Source source) {
-        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("insert into " + SOURCE_TABLE + "(name, parent_id, operation_type_id) values(?,?,?)", Statement.RETURN_GENERATED_KEYS);) {
+        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement("insert into " + SOURCE_TABLE + "(name, parent_id, operation_type_id, icon_name) values(?,?,?,?)");
+             Statement stmtId = SQLiteConnection.getConnection().createStatement();
+        ) {
 
             stmt.setString(1, source.getName());
 
-            if (source.hasParent()){
+            if (source.hasParent()) {
                 stmt.setLong(2, source.getParent().getId());
-            }else{
+            } else {
                 stmt.setNull(2, Types.BIGINT);
             }
 
             stmt.setLong(3, source.getOperationType().getId());
+            stmt.setString(4, source.getIconName());
 
             if (stmt.executeUpdate() == 1) {// если объект добавился нормально
-                try (ResultSet rs = stmt.getGeneratedKeys()) {// получаем id вставленной записи
+
+                try (ResultSet rs = stmtId.executeQuery("SELECT last_insert_rowid()");) {// получаем id вставленной записи
 
                     if (rs.next()) {
                         source.setId(rs.getLong(1));// не забываем просвоить новый id в объект
+                        return true;
                     }
 
-                    return true;
+
                 }
 
             }
@@ -151,6 +184,8 @@ public class SourceDAOImpl implements SourceDAO {
 
         return false;
     }
+
+
 
 
     @Override
@@ -162,15 +197,9 @@ public class SourceDAOImpl implements SourceDAO {
             stmt.setLong(1, operationType.getId());
 
             try (ResultSet rs = stmt.executeQuery();) {
-                DefaultSource source = null;
 
                 while (rs.next()) {
-                    source = new DefaultSource();
-                    source.setId(rs.getLong("id"));
-                    source.setName(rs.getString("name"));
-                    source.setParentId(rs.getLong("parent_id"));
-                    source.setOperationType(OperationType.getType(rs.getInt("operation_type_id")));
-                    sourceList.add(source);
+                    sourceList.add(fillSource(rs));
                 }
 
                 return sourceList;
@@ -182,4 +211,45 @@ public class SourceDAOImpl implements SourceDAO {
 
         return null;
     }
+
+
+    // можно было поиск делать по коллекции, т.к. все данные уже загружены, но если реализовывать постраничный вывод (на будущее) - лучше поиск делать в БД
+    @Override
+    public List<Source> search(String... params) {
+        ArrayList<Source> list = new ArrayList<>();// результаты поиска сохраняем во временную коллекцию (не sourceList) - чтобы вы любое время можно было вернуться к исходным данным
+
+        String searchStr = "%"+params[0]+"%";
+        String sql = "select * from " + SOURCE_TABLE + " where name like ? ";
+
+        if (params.length==2){// в params[1] будем записывать тип для фильтрации (если необходимо), например это нужно для поиска справочных значения при редактировании операции дохода или расхода (чтобы только нужный тип искал)
+            sql += "and operation_type_id=?";
+        }
+
+
+        try (PreparedStatement stmt = SQLiteConnection.getConnection().prepareStatement(sql);) {
+
+
+            stmt.setString(1, searchStr);
+
+            if (params.length==2){
+                stmt.setLong(2, Long.valueOf(params[1]));
+            }
+
+            try (ResultSet rs = stmt.executeQuery();) {
+
+                while (rs.next()) {
+                    list.add(fillSource(rs));
+                }
+
+                return list;
+            }
+
+        } catch (SQLException e) {
+            Logger.getLogger(SourceDAOImpl.class.getName()).log(Level.SEVERE, null, e);
+        }
+
+        return null;
+    }
+
+
 }
